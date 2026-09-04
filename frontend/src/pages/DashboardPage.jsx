@@ -4,42 +4,27 @@ import LoadingState from '../components/LoadingState.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import { resourceApi } from '../services/api.js'
 
-const emptyData = {
-  schedules: [],
-  rooms: [],
-  events: [],
-  announcements: [],
-  assignments: [],
-}
+const emptyData = { schedules: [], rooms: [], events: [], announcements: [], assignments: [] }
 
 export default function DashboardPage() {
   const [data, setData] = useState(emptyData)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [failures, setFailures] = useState([])
 
   async function loadDashboard() {
     setLoading(true)
-    setError('')
+    setFailures([])
     const resources = Object.keys(emptyData)
-    const results = await Promise.allSettled(
-      resources.map((resource) => resourceApi.list(resource)),
-    )
-
+    const results = await Promise.allSettled(resources.map((resource) => resourceApi.list(resource)))
     const nextData = { ...emptyData }
-    const failures = []
+    const failedResources = []
     results.forEach((result, index) => {
       const resource = resources[index]
-      if (result.status === 'fulfilled') {
-        nextData[resource] = Array.isArray(result.value) ? result.value : []
-      } else {
-        failures.push(resource)
-      }
+      if (result.status === 'fulfilled') nextData[resource] = Array.isArray(result.value) ? result.value : []
+      else failedResources.push(resource)
     })
-
     setData(nextData)
-    if (failures.length) {
-      setError(`Could not load: ${failures.join(', ')}`)
-    }
+    setFailures(failedResources)
     setLoading(false)
   }
 
@@ -48,51 +33,24 @@ export default function DashboardPage() {
     return () => window.clearTimeout(loadTimer)
   }, [])
 
-  const todayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(
-    new Date(),
-  )
-
+  const todayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date())
   const todaySchedules = useMemo(
-    () =>
-      data.schedules
-        .filter((item) => item.day === todayName)
-        .sort((a, b) => a.start_time.localeCompare(b.start_time)),
+    () => data.schedules.filter((item) => item.day === todayName).sort((a, b) => a.start_time.localeCompare(b.start_time)),
     [data.schedules, todayName],
   )
-
-  const highPriority = data.announcements
-    .filter((item) => item.priority === 'high')
-    .slice(0, 3)
-
-  const upcomingEvents = data.events
+  const highPriority = data.announcements.filter((item) => item.priority === 'high').slice(0, 3)
+  const allUpcomingEvents = data.events
     .filter((item) => ['upcoming', 'ongoing'].includes(item.status))
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 3)
-
-  const pendingAssignments = data.assignments.filter((item) =>
-    ['pending', 'late'].includes(item.status),
-  )
+  const upcomingEventPreview = allUpcomingEvents.slice(0, 3)
+  const pendingAssignments = data.assignments.filter((item) => ['pending', 'late'].includes(item.status))
+  const unavailable = (resource, value) => failures.includes(resource) ? '—' : value
 
   const metrics = [
-    { label: "Today's classes", value: todaySchedules.length, note: todayName, to: '/schedules' },
-    {
-      label: 'Available rooms',
-      value: data.rooms.filter((item) => item.status === 'available').length,
-      note: `${data.rooms.length} total rooms`,
-      to: '/rooms',
-    },
-    {
-      label: 'Upcoming events',
-      value: upcomingEvents.length,
-      note: 'Open campus activities',
-      to: '/events',
-    },
-    {
-      label: 'Pending assignments',
-      value: pendingAssignments.length,
-      note: 'Check upcoming deadlines',
-      to: '/assignments',
-    },
+    { label: "Today's classes", value: unavailable('schedules', todaySchedules.length), note: failures.includes('schedules') ? 'Data unavailable' : todayName, to: '/schedules' },
+    { label: 'Available rooms', value: unavailable('rooms', data.rooms.filter((item) => item.status === 'available').length), note: failures.includes('rooms') ? 'Data unavailable' : `${data.rooms.length} total rooms`, to: '/rooms' },
+    { label: 'Upcoming events', value: unavailable('events', allUpcomingEvents.length), note: failures.includes('events') ? 'Data unavailable' : 'Open campus activities', to: '/events' },
+    { label: 'Pending assignments', value: unavailable('assignments', pendingAssignments.length), note: failures.includes('assignments') ? 'Data unavailable' : 'Check upcoming deadlines', to: '/assignments' },
   ]
 
   if (loading) return <LoadingState label="Loading the campus dashboard…" />
@@ -100,112 +58,56 @@ export default function DashboardPage() {
   return (
     <section className="page-section">
       <div className="page-header">
-        <div>
-          <p className="eyebrow">Live campus overview</p>
-          <h1>Campus dashboard</h1>
-          <p>Schedules, rooms, deadlines, and notices in one place.</p>
-        </div>
-        <Link className="button primary-button" to="/assistant">
-          Ask CampusOS AI
-        </Link>
+        <div><p className="eyebrow">Campus overview</p><h1>Student dashboard</h1><p>Schedules, rooms, deadlines, and notices in one place.</p></div>
+        <Link className="button primary-button" to="/assistant">Ask CampusOS AI</Link>
       </div>
 
-      {error && (
-        <div className="error-banner">
-          <span>{error}</span>
-          <button type="button" onClick={loadDashboard}>Retry</button>
-        </div>
+      {failures.length > 0 && (
+        <div className="error-banner"><span>Could not load: {failures.join(', ')}</span><button type="button" onClick={loadDashboard}>Retry</button></div>
       )}
 
       <div className="metric-grid">
         {metrics.map((metric) => (
-          <Link className="metric-card" to={metric.to} key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <small>{metric.note}</small>
-          </Link>
+          <Link className="metric-card" to={metric.to} key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.note}</small></Link>
         ))}
       </div>
 
       <div className="dashboard-grid">
         <section className="content-card content-card-wide">
-          <div className="card-heading">
-            <div>
-              <h2>Today’s schedule</h2>
-              <p>{todayName}</p>
-            </div>
-            <Link to="/schedules">View all</Link>
-          </div>
+          <div className="card-heading"><div><h2>Today’s schedule</h2><p>{todayName}</p></div><Link to="/schedules">View all</Link></div>
           <div className="compact-list">
-            {todaySchedules.length ? (
+            {failures.includes('schedules') ? <p className="inline-empty">Schedule data unavailable.</p> : todaySchedules.length ? (
               todaySchedules.slice(0, 5).map((schedule) => (
                 <article key={schedule.id}>
                   <time>{schedule.start_time}</time>
-                  <div>
-                    <strong>{schedule.course} · {schedule.title}</strong>
-                    <p>{schedule.room} · {schedule.instructor}</p>
-                  </div>
+                  <div><strong>{schedule.course} · {schedule.title}</strong><p>{schedule.room} · {schedule.instructor}</p></div>
                   <span className="soft-chip">Section {schedule.section}</span>
                 </article>
               ))
-            ) : (
-              <p className="inline-empty">No classes scheduled for today.</p>
-            )}
+            ) : <p className="inline-empty">No classes scheduled for today.</p>}
           </div>
         </section>
 
         <section className="content-card">
-          <div className="card-heading">
-            <div>
-              <h2>Important announcements</h2>
-              <p>High-priority campus updates</p>
-            </div>
-            <Link to="/announcements">View all</Link>
-          </div>
+          <div className="card-heading"><div><h2>Important announcements</h2><p>High-priority campus updates</p></div><Link to="/announcements">View all</Link></div>
           <div className="notice-list">
-            {highPriority.length ? (
-              highPriority.map((notice) => (
-                <article key={notice.id}>
-                  <StatusBadge value={notice.priority} />
-                  <strong>{notice.title}</strong>
-                  <small>Expires {notice.expires}</small>
-                </article>
-              ))
-            ) : (
-              <p className="inline-empty">No high-priority announcements.</p>
-            )}
+            {failures.includes('announcements') ? <p className="inline-empty">Announcement data unavailable.</p> : highPriority.length ? highPriority.map((notice) => (
+              <article key={notice.id}><StatusBadge value={notice.priority} /><strong>{notice.title}</strong><small>Expires {notice.expires}</small></article>
+            )) : <p className="inline-empty">No high-priority announcements.</p>}
           </div>
         </section>
 
         <section className="content-card">
-          <div className="card-heading">
-            <div>
-              <h2>Upcoming events</h2>
-              <p>Campus activities</p>
-            </div>
-            <Link to="/events">View all</Link>
-          </div>
+          <div className="card-heading"><div><h2>Upcoming events</h2><p>Campus activities</p></div><Link to="/events">View all</Link></div>
           <div className="notice-list">
-            {upcomingEvents.length ? (
-              upcomingEvents.map((event) => (
-                <article key={event.id}>
-                  <span className="soft-chip">{event.date}</span>
-                  <strong>{event.name}</strong>
-                  <small>{event.start_time} · {event.venue}</small>
-                </article>
-              ))
-            ) : (
-              <p className="inline-empty">No upcoming events.</p>
-            )}
+            {failures.includes('events') ? <p className="inline-empty">Event data unavailable.</p> : upcomingEventPreview.length ? upcomingEventPreview.map((event) => (
+              <article key={event.id}><span className="soft-chip">{event.date}</span><strong>{event.name}</strong><small>{event.start_time} · {event.venue}</small></article>
+            )) : <p className="inline-empty">No upcoming events.</p>}
           </div>
         </section>
 
         <section className="content-card ai-shortcut">
-          <div className="ai-mark">AI</div>
-          <div>
-            <h2>CampusOS Assistant</h2>
-            <p>Ask about live schedules, deadlines, rooms, and events.</p>
-          </div>
+          <div className="ai-mark">AI</div><div><h2>CampusOS Assistant</h2><p>Ask about current schedules, deadlines, rooms, and events.</p></div>
           <Link className="button secondary-button" to="/assistant">Open chat</Link>
         </section>
       </div>

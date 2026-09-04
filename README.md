@@ -1,102 +1,113 @@
-# CampusOS — AI Build Hackathon
+# CampusOS
 
-An intelligent university platform powered by an AI agent that understands and acts on real-time campus data.
+CampusOS is a student-focused campus data manager and tool-enabled AI assistant. It keeps schedules, rooms, events, announcements, and assignments in one persistent backend, and lets the AI read and act on the latest state.
 
----
+## Features
 
-## The Challenge
+- Full add, edit, and delete support for all five campus resources
+- Room booking/cancellation with overlap validation
+- Event registration/cancellation with duplicate and capacity validation
+- Persistent backend seeded from the official JSON files on first run
+- AI tool calling for live lookups, availability checks, bookings, and registrations
+- Responsive React interface
 
-Students struggle daily with scattered campus information — class changes buried in group chats, deadlines forgotten until the last minute, no easy way to know what's happening on campus right now.
+## Requirements
 
-Your job: build **CampusOS** — a two-part app with a data dashboard and an AI agent that always reads live data.
+- Node.js 18+
+- Python 3.10+
+- An OpenRouter API key and a tool-capable model
 
-Read the full problem statement → [`PROBLEM_STATEMENT.md`](./PROBLEM_STATEMENT.md)
+## Setup
 
----
-
-## Repository Structure
-
-```
-campusos-hackathon/
-│
-├── README.md                    ← You are here
-├── PROBLEM_STATEMENT.md         ← Full problem statement + scoring
-├── SUBMISSION.md                ← How and where to submit
-│
-├── data/                        ← Seed data (load these into your backend)
-│   ├── schedules.json
-│   ├── rooms.json
-│   ├── events.json
-│   ├── announcements.json
-│   └── assignments.json
-│
-├── schema/
-│   └── schema.md                ← Field names, types, and constraints for all 5 systems
-│
-└── sample_queries/
-    └── sample_queries.md        ← Queries we will use when judging your agent
-```
-
----
-
-## How to Participate
-
-### 1. Fork the repository
-
-Click **Fork** in the top-right corner of this repo's GitHub page. This creates your own copy under your GitHub account, where you'll build your solution.
-
-### 2. Clone your fork
+### 1. Backend API
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/campusos-hackathon.git
-cd campusos-hackathon
+cd backend
+npm install
+npm start
 ```
 
-### 3. Build your solution inside your fork
+The API runs at `http://localhost:3000`. On first start it creates `backend/database/campusos-store.json` from the official files in `data/`.
 
-> Your solution lives in your fork — do not open a pull request to this repo.
+### 2. AI agent
 
-### 4. Making your fork private
+Create `backend/agent/.env`:
 
-By default, a fork is public. If you want to keep your work hidden from other participants while you build:
+```env
+OPENROUTER_API_KEY=your_key_here
+OPENROUTER_MODEL=inclusionai/ling-3.0-flash-fin:free
+BACKEND_API_URL=http://localhost:3000/api
+AGENT_PORT=8001
+```
 
-1. Go to your fork on GitHub
-2. Open **Settings** (top of the repo page)
-3. Scroll to the **Danger Zone** at the bottom
-4. Click **Change repository visibility** → **Make private**
-5. Confirm by typing the repository name
+Then run:
 
-> **You may keep your fork private during the hackathon period, but it must be switched back to public by 8:30 PM on the submission deadline.** Repositories still private after that time will not be judged. To make it public again, repeat the steps above and choose **Make public** instead.
+```bash
+cd backend/agent
+python -m venv .venv
+```
 
-### 5. Submit
+Windows PowerShell:
 
-Submit your fork's public URL via the instructions in [`SUBMISSION.md`](./SUBMISSION.md).
+```powershell
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python main.py
+```
 
----
+macOS/Linux:
 
-## Quick Links
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+python main.py
+```
 
-| Resource | Link |
-|----------|------|
-| Full problem statement | [`PROBLEM_STATEMENT.md`](./PROBLEM_STATEMENT.md) |
-| Data schema | [`schema/schema.md`](./schema/schema.md) |
-| Sample agent queries | [`sample_queries/sample_queries.md`](./sample_queries/sample_queries.md) |
-| Submission guide | [`SUBMISSION.md`](./SUBMISSION.md) |
+The agent service runs at `http://localhost:8001`. The Express API proxies `/api/agent/chat` to it.
 
----
+### 3. Frontend
 
-## Seed Data Overview
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-| File | Records | What It Contains |
-|------|---------|-----------------|
-| `schedules.json` | 24 | Class timetable — course, day, time, room, instructor |
-| `rooms.json` | 20 | Rooms 7A01–7A07, 7B01–7B08, 7C01–7C05 with equipment and bookings |
-| `events.json` | 7 | Campus events with registration lists |
-| `announcements.json` | 8 | Notices with priority levels and expiry dates |
-| `assignments.json` | 8 | Course assignments with deadlines and submission status |
+Open `http://localhost:5173`.
 
-> **Important:** These JSON files are only the starting/seed data — not the database itself. Load them into a real backend (a database, or at minimum a backend service with persistent storage) on app startup. Your dashboard and AI agent must both read from and write to that backend, not the static JSON files directly. If you add, edit, or delete a record, the change must be saved in your backend and still be there after a reload — the JSON files in this repo will not update. The agent is also expected to always query the current backend state, not a cached or hardcoded copy of the seed data.
+## Health checks
 
----
+- Backend: `http://localhost:3000/health`
+- Agent: `http://localhost:8001/health`
+- Sample data: `http://localhost:3000/api/schedules`
 
-Good luck. Build something that actually works.
+## Architecture
+
+```text
+React frontend -> Express API -> persistent JSON store
+                         |
+                         +-> Python AI agent -> Express API tools
+```
+
+Both the dashboard and AI agent use the same Express API, so changes made through CRUD operations become immediately available to the agent.
+
+## API
+
+- `/api/schedules`
+- `/api/rooms`
+- `/api/events`
+- `/api/announcements`
+- `/api/assignments`
+- `/api/agent/chat`
+
+Resource endpoints support `GET`, `POST`, `PUT /:id`, and `DELETE /:id`. Rooms also support booking routes, and events support registration routes.
+
+## Demo queries
+
+- When is my next class?
+- What assignments do I have due this week?
+- Which labs have a projector and fit at least 30 people?
+- Book Room 7A02 tomorrow from 3 PM to 5 PM.
+- Register me for Guest Lecture: Deep Learning in Medical Imaging.
+
+See `PROBLEM_STATEMENT.md`, `schema/schema.md`, and `sample_queries/sample_queries.md` for the official challenge details.

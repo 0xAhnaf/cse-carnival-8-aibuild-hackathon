@@ -1,1 +1,7 @@
 node_modules/
+.env
+database/campusos-store.json
+database/campusos-store.json.tmp
+database/*.db
+database/*.db-shm
+database/*.db-wal

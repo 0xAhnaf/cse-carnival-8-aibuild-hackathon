@@ -6,18 +6,14 @@ export default function DataTable({
   renderExtraActions,
   emptyMessage = 'No records found.',
 }) {
-  if (!records.length) {
-    return <div className="empty-state">{emptyMessage}</div>
-  }
+  if (!records.length) return <div className="empty-state">{emptyMessage}</div>
 
   return (
     <div className="table-shell">
       <table className="data-table">
         <thead>
           <tr>
-            {columns.map((column) => (
-              <th key={column.key}>{column.label}</th>
-            ))}
+            {columns.map((column) => <th key={column.key}>{column.label}</th>)}
             <th className="actions-column">Actions</th>
           </tr>
         </thead>
@@ -26,31 +22,13 @@ export default function DataTable({
             <tr key={record.id}>
               {columns.map((column) => (
                 <td key={column.key} data-label={column.label}>
-                  {column.render
-                    ? column.render(record[column.key], record)
-                    : record[column.key] || '—'}
+                  {column.render ? column.render(record[column.key], record) : (record[column.key] ?? '—')}
                 </td>
               ))}
               <td className="table-actions" data-label="Actions">
                 {renderExtraActions?.(record)}
-                <button
-                  className="icon-button"
-                  type="button"
-                  onClick={() => onEdit(record)}
-                  aria-label={`Edit ${record.id}`}
-                  title="Edit"
-                >
-                  Edit
-                </button>
-                <button
-                  className="icon-button danger-text"
-                  type="button"
-                  onClick={() => onDelete(record)}
-                  aria-label={`Delete ${record.id}`}
-                  title="Delete"
-                >
-                  Delete
-                </button>
+                <button className="icon-button" type="button" onClick={() => onEdit(record)} aria-label={`Edit ${record.id}`} title="Edit">Edit</button>
+                <button className="icon-button danger-text" type="button" onClick={() => onDelete(record)} aria-label={`Delete ${record.id}`} title="Delete">Delete</button>
               </td>
             </tr>
           ))}
