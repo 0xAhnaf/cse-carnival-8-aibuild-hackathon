@@ -25,7 +25,7 @@ export default function AppLayout() {
           <span className="brand-mark">C</span>
           <div>
             <strong>CampusOS</strong>
-            <small>Academic Portal</small>
+            <small>Student Portal</small>
           </div>
         </div>
 
@@ -44,46 +44,29 @@ export default function AppLayout() {
           ))}
         </nav>
 
-        <div className="sidebar-footer">
-          <span className="live-dot" />
-          Live campus data
-        </div>
+        <div className="sidebar-footer">Campus data manager</div>
       </aside>
 
       {menuOpen && (
-        <button
-          className="menu-backdrop"
-          type="button"
-          onClick={() => setMenuOpen(false)}
-          aria-label="Close navigation"
-        />
+        <button className="menu-backdrop" type="button" onClick={() => setMenuOpen(false)} aria-label="Close navigation" />
       )}
 
       <div className="app-main">
         <header className="topbar">
           <div className="topbar-left">
-            <button
-              className="menu-button"
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              aria-label="Open navigation"
-            >
-              ☰
-            </button>
+            <button className="menu-button" type="button" onClick={() => setMenuOpen(true)} aria-label="Open navigation">☰</button>
             <div>
               <strong>{activePage?.label || 'CampusOS'}</strong>
-              <small>Current university operations</small>
+              <small>Your campus at a glance</small>
             </div>
           </div>
           <div className="profile-chip">
-            <span className="profile-avatar">A</span>
-            <span>Campus Admin</span>
+            <span className="profile-avatar">SA</span>
+            <span>Shadab Arshad · Student</span>
           </div>
         </header>
 
-        <main className="page-content">
-          <Outlet />
-        </main>
+        <main className="page-content"><Outlet /></main>
       </div>
     </div>
   )

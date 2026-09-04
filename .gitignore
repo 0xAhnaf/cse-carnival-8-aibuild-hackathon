@@ -1,30 +1,26 @@
-# Dependencies
+# Dependencies and Python environments
 node_modules/
 __pycache__/
 *.pyc
 .venv/
 venv/
-env/
 
-# Environment
+# Secrets
 .env
 *.env.local
 
-# Build outputs
+# Runtime data and build output
+backend/database/campusos-store.json
+backend/database/campusos-store.json.tmp
+backend/database/*.db
+backend/database/*.db-shm
+backend/database/*.db-wal
 dist/
 build/
-.next/
-out/
 
-# Editors
+# Editors and OS
 .vscode/
 .idea/
-*.swp
-
-# OS
 .DS_Store
 Thumbs.db
-
-# Logs
 *.log
-npm-debug.log*
